@@ -151,7 +151,7 @@ export default function LoginScreen() {
 
     const handleSuccessContinue = () => {
         setShowSuccessModal(false);
-        router.replace("/tabs/home");
+        router.replace("/profileSetup/userInfo");
     };
 
     const emailHasError = !!errors.email && (touched.email || submitAttempted);
