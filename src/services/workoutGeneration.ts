@@ -9,12 +9,12 @@ export async function generateWorkoutPlan(userId: string) {
             .eq("user_id", userId)
             .single();
 
-        if (!profile.profile_completed) {
-            throw new Error("Complete profile first");
-        }
-
         if (profileError || !profile) {
             throw new Error("Profile not found");
+        }
+
+        if (!profile.profile_completed) {
+            throw new Error("Complete profile first");
         }
 
         // 2. Find Matching Template

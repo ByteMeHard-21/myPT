@@ -14,10 +14,9 @@ import Svg, { Circle } from "react-native-svg";
 import { router } from "expo-router";
 
 import { supabase } from "../../../services/supabase";
-
 import { useProfileSetupStore } from "../../../store/profileSetupStore";
-
 import { completeProfile } from "../../../services/profileService";
+import { generateWorkoutPlan } from "../../../services/workoutGeneration";
 
 const COLORS = {
     bg: "#0B1110",
@@ -29,13 +28,15 @@ const COLORS = {
 
 const STEPS = [
     "Analyzing Profile",
-    "Calculating Calories",
+    "Saving Profile",
+    "Analyzing Goals",
     "Selecting Exercises",
     "Designing Workout Split",
+    "Generating Workout Plan",
 ];
 
-const STEP_DURATION = 1200;
-const TOTAL_TIME = STEPS.length * STEP_DURATION;
+const STEP_DURATION = 700;
+const PRE_GENERATION_PROGRESS = 0.85;
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -78,7 +79,8 @@ export default function AIPlanGenerationScreen({ onComplete }: any) {
     const startSteps = () => {
         let time = 0;
 
-        STEPS.forEach((_, i) => {
+        // Animate only the first 5 steps
+        for (let i = 0; i < STEPS.length - 1; i++) {
             const start = time;
             const end = time + STEP_DURATION;
 
@@ -101,7 +103,18 @@ export default function AIPlanGenerationScreen({ onComplete }: any) {
             timeouts.current.push(t1, t2);
 
             time += STEP_DURATION;
-        });
+        }
+
+        // Start last step but don't complete it yet
+        const last = setTimeout(() => {
+            setStepStatus((prev) => {
+                const copy = [...prev];
+                copy[STEPS.length - 1] = "active";
+                return copy;
+            });
+        }, time);
+
+        timeouts.current.push(last);
     };
 
     const profile = useProfileSetupStore();
@@ -113,24 +126,60 @@ export default function AIPlanGenerationScreen({ onComplete }: any) {
             const { data } = await supabase.auth.getUser();
             const userId = data.user?.id;
 
-            if (!userId) throw new Error("No user logged in");
+            if (!userId) {
+                throw new Error("No user logged in");
+            }
 
-            await completeProfile(userId, {
-                full_name: profile.fullName,
-                gender: profile.gender,
-                goal: profile.goal,
-                age: profile.age,
-                height_cm: profile.heightCm,
-                weight_kg: profile.weightKg,
-                experience_level: profile.experienceLevel,
-                workout_days: profile.workoutDays,
-                preferred_split: profile.preferredSplit,
-                diet_preference: profile.dietPreference,
+            progress.value = withTiming(PRE_GENERATION_PROGRESS, {
+                duration: (STEPS.length - 1) * STEP_DURATION,
+                easing: Easing.linear,
             });
+
+            // Step 1
+            await completeProfile(userId, {
+                fullName: profile.fullName,
+                gender: profile.gender,
+                age: profile.age,
+                heightCm: profile.heightCm,
+                weightKg: profile.weightKg,
+                goal: profile.goal,
+                experienceLevel: profile.experienceLevel,
+                workoutDays: profile.workoutDays,
+                preferredSplit: profile.preferredSplit,
+                dietPreference: profile.dietPreference,
+            });
+
+            // Step 2
+            const result = await generateWorkoutPlan(userId);
+
+            if (!result.success) {
+                throw result.error;
+            }
+
+            // Mark last step complete
+            setStepStatus((prev) => {
+                const copy = [...prev];
+                copy[STEPS.length - 1] = "done";
+                return copy;
+            });
+
+            // Animate from 85% -> 100%
+            progress.value = withTiming(
+                1,
+                {
+                    duration: 700,
+                    easing: Easing.out(Easing.ease),
+                },
+                (finished) => {
+                    if (finished) {
+                        runOnJS(setIsComplete)(true);
+                    }
+                }
+            );
 
             setDbDone(true);
         } catch (e) {
-            console.log("Profile save failed", e);
+            console.error("Profile setup failed:", e);
         } finally {
             setLoading(false);
         }
@@ -138,37 +187,8 @@ export default function AIPlanGenerationScreen({ onComplete }: any) {
 
     // ---------------- MAIN EFFECT ----------------
     useEffect(() => {
-        let animationDone = false;
-        let dbDoneLocal = false;
-
-        const checkDone = () => {
-            if (animationDone && dbDoneLocal) {
-                setIsComplete(true);
-            }
-        };
-
-        progress.value = withTiming(
-            1,
-            {
-                duration: TOTAL_TIME,
-                easing: Easing.linear,
-            },
-            (finished) => {
-                if (finished) {
-                    runOnJS(() => {
-                        animationDone = true;
-                        checkDone();
-                    })();
-                }
-            }
-        );
-
         startSteps();
-
-        saveProfile().then(() => {
-            dbDoneLocal = true;
-            checkDone();
-        });
+        saveProfile();
 
         return () => {
             timeouts.current.forEach(clearTimeout);
@@ -176,12 +196,12 @@ export default function AIPlanGenerationScreen({ onComplete }: any) {
         };
     }, []);
 
-    const canProceed = isComplete && dbDone;
+    const canProceed = isComplete;
     useEffect(() => {
-        if (isComplete && dbDone) {
+        if (isComplete) {
             router.replace("/tabs/home");
         }
-    }, [isComplete, dbDone]);
+    }, [isComplete]);
 
     // ---------------- UI ----------------
     return (
