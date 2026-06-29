@@ -19,7 +19,6 @@ export async function completeProfile(userId: string, profile: any) {
         .eq("user_id", userId)
         .select();
 
-    console.log("DATA:", data);
     console.log("ERROR:", error);
 
     if (error) throw error;

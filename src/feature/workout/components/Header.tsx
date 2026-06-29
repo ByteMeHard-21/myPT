@@ -4,8 +4,10 @@ import {
     Text,
     TouchableOpacity,
     StyleSheet,
+    Image
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuthStore } from "../../../store/authStore";
 
 import { Colors, Spacing, Radius } from "../theme";
 
@@ -17,21 +19,29 @@ const Header = () => {
         day: "numeric",
         month: "long",
     });
+    const profile = useAuthStore((s) => s.profile);
 
     return (
         <View style={styles.container}>
             {/* Profile */}
-            <TouchableOpacity activeOpacity={0.8}>
-                <Ionicons
-                    name="person-circle-outline"
-                    size={42}
-                    color={Colors.text}
-                />
-            </TouchableOpacity>
+            <View style={{ marginLeft: 12 }}>
+                <TouchableOpacity activeOpacity={0.8}>
+                    <Image
+                        source={
+                            profile?.avatar_url
+                                ? {
+                                    uri: `${profile.avatar_url}?v=${Date.now()}`,
+                                }
+                                : require("../../../../assets/images/placeholder_img.jpg")
+                        }
+                        style={styles.avatar}
+                    />
+                </TouchableOpacity>
+            </View>
 
             {/* Center Content */}
             <View style={styles.centerContainer}>
-                <Text style={styles.hello}>Hello, Alex</Text>
+                <Text style={styles.hello}> Hello, {profile?.full_name?.split(" ")[0] ?? "Athlete"}</Text>
                 <Text style={styles.date}>{formattedDate}</Text>
             </View>
 
@@ -92,5 +102,16 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.surface,
         borderWidth: 1,
         borderColor: Colors.border,
+    },
+    avatar: {
+        width: 52,
+        height: 52,
+
+        borderRadius: 26,
+
+        borderWidth: 2,
+        borderColor: Colors.border,
+
+        backgroundColor: Colors.surface,
     },
 });
