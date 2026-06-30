@@ -23,7 +23,7 @@ export interface UserProfile {
 
     diet_preference: string | null;
 
-    is_profile_completed: boolean;
+    profile_completed: boolean;
 
     avatar_url: string | null;
 }

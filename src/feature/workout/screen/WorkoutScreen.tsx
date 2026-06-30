@@ -9,16 +9,18 @@ import {
     Text,
     StyleSheet,
 } from "react-native";
+import { Activity, Dumbbell, Clock3 } from "lucide-react-native";
 
-import Header from "./components/Header";
-import Calendar from "./components/Calendar";
-import ExerciseCards from "./components/ExerciseCards";
-import StartWorkoutButton from "./components/StartWorkoutButton";
-import { useAuthStore } from "../../store/authStore";
-import { getCurrentWorkout } from "./workout.api";
-import { CurrentWorkout } from "./workout.types";
+import Header from "../components/Header";
+import Calendar from "../components/Calendar";
+import ExerciseCards from "../components/ExerciseCards";
+import StartWorkoutButton from "../components/StartWorkoutButton";
+import { useAuthStore } from "../../../store/authStore";
+import { getCurrentWorkout } from "../workout.api";
+import { CurrentWorkout } from "../workout.types";
+import RecoveryScreen from "./EmptyWorkoutScreen";
 
-import { Colors, Radius, Spacing } from "./theme";
+import { Colors, Radius, Spacing } from "../theme";
 
 const workout = {
     title: "Push Day",
@@ -62,7 +64,7 @@ export default function WorkoutScreen() {
     }
 
     if (!workout) {
-        return null;
+        return <RecoveryScreen />;
     }
 
     return (
@@ -73,10 +75,7 @@ export default function WorkoutScreen() {
             >
                 {/* Header */}
                 <View style={{ marginTop: 20 }}>
-                    <Header
-                        userName={profile?.full_name ?? "User"}
-                        avatarUrl={profile?.avatar_url}
-                    />
+                    <Header />
                 </View>
 
                 {/* Calendar */}
@@ -100,20 +99,35 @@ export default function WorkoutScreen() {
 
                     <View style={styles.chipsContainer}>
                         <View style={styles.chip}>
+                            <Clock3
+                                size={16}
+                                color={Colors.text}
+                                strokeWidth={2.2}
+                            />
                             <Text style={styles.chipText}>
-                                ⏱ {workout.estimatedDuration}
+                                {workout.estimatedDuration}
                             </Text>
                         </View>
 
                         <View style={styles.chip}>
+                            <Dumbbell
+                                size={16}
+                                color={Colors.text}
+                                strokeWidth={2.2}
+                            />
                             <Text style={styles.chipText}>
-                                💪 {workout.exerciseCount} Exercises
+                                {workout.exerciseCount} Exercises
                             </Text>
                         </View>
 
                         <View style={styles.chip}>
+                            <Activity
+                                size={16}
+                                color={Colors.text}
+                                strokeWidth={2.2}
+                            />
                             <Text style={styles.chipText}>
-                                🔥 {workout.difficulty}
+                                {workout.difficulty}
                             </Text>
                         </View>
                     </View>
@@ -195,13 +209,12 @@ const styles = StyleSheet.create({
 
     chip: {
         height: 36,
-
         paddingHorizontal: 16,
-
         backgroundColor: "#19413C",
-
         borderRadius: Radius.pill,
 
+        flexDirection: "row",
+        alignItems: "center",
         justifyContent: "center",
 
         marginRight: 10,
@@ -209,6 +222,7 @@ const styles = StyleSheet.create({
     },
 
     chipText: {
+        marginLeft: 6,
         color: Colors.text,
         fontSize: 13,
         fontWeight: "600",

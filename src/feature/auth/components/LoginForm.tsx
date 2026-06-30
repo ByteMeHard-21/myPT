@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
     View,
     Text,
@@ -78,6 +78,7 @@ export default function LoginScreen() {
 
     const passwordInputRef = useRef<TextInput | null>(null);
     const setSession = useAuthStore((s) => s.setSession);
+    const profile = useAuthStore((s) => s.profile);
 
     const handleEmailChange = (value: string) => {
         setEmail(value);
@@ -140,7 +141,6 @@ export default function LoginScreen() {
 
             setSession(data.session); // optional (listener also handles it)
 
-
             setShowSuccessModal(true);
         } catch (err) {
             setFormError("Something went wrong. Please try again.");
@@ -149,10 +149,18 @@ export default function LoginScreen() {
         }
     };
 
+
+
     const handleSuccessContinue = () => {
         setShowSuccessModal(false);
 
-        router.replace("/tabs/workout");
+        if (!profile) return;
+
+        if (profile.profile_completed) {
+            router.replace("/tabs/workout");
+        } else {
+            router.replace("/profileSetup/userInfo");
+        }
     };
 
     const emailHasError = !!errors.email && (touched.email || submitAttempted);

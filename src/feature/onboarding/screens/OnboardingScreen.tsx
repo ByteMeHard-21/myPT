@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import SlideToStart from "../component/SlideToStart";
+import { useAuthStore } from "../../../store/authStore";
 
 const { width, height } = Dimensions.get("window");
 
@@ -48,6 +49,9 @@ export default function OnboardingScreen() {
     const [currentIndex, setCurrentIndex] = useState(0);
 
     const currentSlide = ONBOARDING_SLIDES[currentIndex];
+    const setHasSeenOnboarding = useAuthStore(
+        (state) => state.setHasSeenOnboarding
+    );
 
     const handleNext = () => {
         if (currentIndex < ONBOARDING_SLIDES.length - 1) {
@@ -65,8 +69,9 @@ export default function OnboardingScreen() {
         setCurrentIndex(ONBOARDING_SLIDES.length - 1);
     };
 
-    const handleFinish = () => {
-        AsyncStorage.setItem("hasSeenOnboarding", "true");
+    const handleFinish = async () => {
+        await AsyncStorage.setItem("hasSeenOnboarding", "true");
+        setHasSeenOnboarding(true);
         router.replace("/auth/login");
     };
 

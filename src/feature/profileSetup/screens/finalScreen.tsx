@@ -17,6 +17,7 @@ import { supabase } from "../../../services/supabase";
 import { useProfileSetupStore } from "../../../store/profileSetupStore";
 import { completeProfile } from "../../../services/profileService";
 import { generateWorkoutPlan } from "../../../services/workoutGeneration";
+import { useAuthStore } from "../../../store/authStore";
 
 const COLORS = {
     bg: "#0B1110",
@@ -52,6 +53,7 @@ export default function AIPlanGenerationScreen({ onComplete }: any) {
     const [stepStatus, setStepStatus] = useState(
         STEPS.map(() => "pending")
     );
+    const updateProfile = useAuthStore((s) => s.updateProfile);
 
     const timeouts = useRef<any[]>([]);
 
@@ -157,11 +159,14 @@ export default function AIPlanGenerationScreen({ onComplete }: any) {
             }
 
             // Mark last step complete
-            setStepStatus((prev) => {
-                const copy = [...prev];
-                copy[STEPS.length - 1] = "done";
-                return copy;
-            });
+            const { error } = await supabase
+                .from("profiles")
+                .update({ profile_completed: true })
+                .eq("id", userId);
+
+            if (error) {
+                throw error;
+            }
 
             // Animate from 85% -> 100%
             progress.value = withTiming(
@@ -176,7 +181,9 @@ export default function AIPlanGenerationScreen({ onComplete }: any) {
                     }
                 }
             );
-
+            updateProfile({
+                profile_completed: true,
+            });
             setDbDone(true);
         } catch (e) {
             console.error("Profile setup failed:", e);

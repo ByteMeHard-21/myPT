@@ -176,8 +176,12 @@ export default function SignupScreen() {
                 return;
             }
 
-            setSession(data.session);
+            if (!data.session) {
+                setFormError("Unable to create a session.");
+                return;
+            }
 
+            setSession(data.session);
             setShowSuccessModal(true);
         } catch (err) {
             setFormError("Something went wrong. Please try again.");
@@ -188,7 +192,7 @@ export default function SignupScreen() {
 
     const handleSuccessContinue = () => {
         setShowSuccessModal(false);
-        // router.replace("/(tabs)/home"); // hook up real navigation here
+        router.replace("/profileSetup/userInfo");// hook up real navigation here
     };
 
     const emailHasError = !!errors.email && (touched.email || submitAttempted);

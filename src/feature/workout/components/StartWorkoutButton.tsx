@@ -17,7 +17,7 @@ const StartWorkoutButton = () => {
             activeOpacity={0.9}
             style={styles.button}
             onPress={() =>
-                router.push("/tabs/startworkout")
+                router.push("/workout")
             }
         >
             <Text style={styles.text}>
