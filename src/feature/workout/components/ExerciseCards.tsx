@@ -11,6 +11,7 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import { Colors, Radius, Spacing } from "../theme";
+import { WorkoutExercise } from "../workout.types";
 
 const { width } = Dimensions.get("window");
 
@@ -67,18 +68,31 @@ const exercises = [
     },
 ];
 
-const ExerciseCards = () => {
+interface Props {
+    exercises: WorkoutExercise[];
+}
+
+const ExerciseCards = ({
+    exercises,
+}: Props) => {
     const [expanded, setExpanded] = useState(false);
 
     const visibleExercises = useMemo(() => {
         if (expanded) return exercises;
         return exercises.slice(0, INITIAL_VISIBLE);
     }, [expanded]);
+    const PLACEHOLDER = require("../../../../assets/images/placeholder_img.jpg");
 
     const renderItem = ({ item }: any) => (
         <View style={styles.card} >
             <Image
-                source={item.image}
+                source={
+                    item.thumbnailUrl
+                        ? {
+                            uri: item.thumbnailUrl,
+                        }
+                        : PLACEHOLDER
+                }
                 style={styles.image}
             />
 

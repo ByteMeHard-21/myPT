@@ -199,7 +199,7 @@ export default function AIPlanGenerationScreen({ onComplete }: any) {
     const canProceed = isComplete;
     useEffect(() => {
         if (isComplete) {
-            router.replace("/tabs/home");
+            router.replace("/tabs/workout");
         }
     }, [isComplete]);
 

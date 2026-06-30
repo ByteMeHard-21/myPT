@@ -1,11 +1,10 @@
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useMemo, useRef } from "react";
 import {
     View,
     Text,
     ScrollView,
     StyleSheet,
-    TouchableOpacity,
-    Pressable
+    Pressable,
 } from "react-native";
 import BottomSheet, {
     BottomSheetBackdrop,
@@ -21,12 +20,12 @@ import JourneySection from "./components/JourneySection";
 import AccountSection from "./components/AccountSection";
 import { Colors, Radius } from "../workout/theme";
 import { useAuthStore } from "../../store/authStore";
-import { UserProfile } from '../../feature/auth/auth.types';
 import {
     uploadAvatar,
     deleteProfileImage,
 } from '../../services/avatar.service';
 import { supabase } from "../../services/supabase";
+import { UserProfile } from "../auth/auth.types";
 
 import { updateAvatar } from './profile.api';
 
@@ -81,22 +80,6 @@ const SheetOption: React.FC<SheetOptionProps> = ({
     </Pressable>
 );
 
-export interface Profile {
-    id: string;
-    user_id: string;
-    email: string | null;
-    full_name: string | null;
-    age: number | null;
-    gender: string | null;
-    height_cm: number | null;
-    weight_kg: number | null;
-    goal: string | null;
-    experience_level: string | null;
-    workout_days: number | null;
-    preferred_split: string | null;
-    diet_preference: string | null;
-    avatar_url: string | null;
-}
 
 export default function ProfileScreen() {
     const bottomSheetRef = useRef<BottomSheet>(null);
@@ -152,7 +135,7 @@ export default function ProfileScreen() {
 
             closeSheet();
         } catch (error) {
-            console.log(error);
+            console.error("Failed to upload avatar:", error);
         }
     };
 

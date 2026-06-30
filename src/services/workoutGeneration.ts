@@ -51,6 +51,7 @@ export async function generateWorkoutPlan(userId: string) {
                 goal: template.goal,
                 experience_level: template.experience_level,
                 days_per_week: template.days_per_week,
+                current_day_number: 1,
                 is_active: true,
                 created_at: new Date().toISOString(),
             })
@@ -81,6 +82,10 @@ export async function generateWorkoutPlan(userId: string) {
                         day_number: templateDay.day_number,
                         day_name: templateDay.day_name,
                         focus: templateDay.focus,
+
+                        workout_title: templateDay.workout_title,
+                        estimated_duration_minutes:
+                            templateDay.estimated_duration_minutes,
                     })
                     .select()
                     .single();

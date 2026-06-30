@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
     View,
     Text,
@@ -11,21 +11,24 @@ import { useAuthStore } from "../../../store/authStore";
 
 import { Colors, Spacing, Radius } from "../theme";
 
+
 const Header = () => {
     const today = new Date();
 
-    const formattedDate = today.toLocaleDateString("en-US", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-    });
+    const formattedDate = useMemo(() =>
+        new Date().toLocaleDateString("en-US", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+        }),
+        []);
     const profile = useAuthStore((s) => s.profile);
 
     return (
         <View style={styles.container}>
             {/* Profile */}
             <View style={{ marginLeft: 12 }}>
-                <TouchableOpacity activeOpacity={0.8}>
+                <TouchableOpacity activeOpacity={0.8} >
                     <Image
                         source={
                             profile?.avatar_url

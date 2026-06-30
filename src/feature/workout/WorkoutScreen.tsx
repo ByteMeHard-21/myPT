@@ -1,4 +1,7 @@
-import React from "react";
+import {
+    useEffect,
+    useState,
+} from "react";
 import {
     SafeAreaView,
     ScrollView,
@@ -11,6 +14,9 @@ import Header from "./components/Header";
 import Calendar from "./components/Calendar";
 import ExerciseCards from "./components/ExerciseCards";
 import StartWorkoutButton from "./components/StartWorkoutButton";
+import { useAuthStore } from "../../store/authStore";
+import { getCurrentWorkout } from "./workout.api";
+import { CurrentWorkout } from "./workout.types";
 
 import { Colors, Radius, Spacing } from "./theme";
 
@@ -24,6 +30,41 @@ const workout = {
 };
 
 export default function WorkoutScreen() {
+    const profile = useAuthStore(state => state.profile);
+    const user = useAuthStore((state) => state.session);
+    const [workout, setWorkout] =
+        useState<CurrentWorkout | null>(null);
+
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const userId = user.user.id;
+
+        async function loadWorkout() {
+            try {
+                const data = await getCurrentWorkout(userId);
+
+                setWorkout(data);
+            } catch (err) {
+                console.log(err);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        loadWorkout();
+    }, [user]);
+
+    if (loading) {
+        return null;
+    }
+
+    if (!workout) {
+        return null;
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView
@@ -32,15 +73,18 @@ export default function WorkoutScreen() {
             >
                 {/* Header */}
                 <View style={{ marginTop: 20 }}>
-                    <Header />
+                    <Header
+                        userName={profile?.full_name ?? "User"}
+                        avatarUrl={profile?.avatar_url}
+                    />
                 </View>
 
                 {/* Calendar */}
-                <View style={{ height: 16 }} />
+
                 <Calendar />
 
                 {/* Hero */}
-                <View style={{ height: 26 }} />
+
                 <View style={styles.heroContainer}>
                     <Text style={styles.sectionTitle}>
                         TODAY'S WORKOUT
@@ -57,13 +101,13 @@ export default function WorkoutScreen() {
                     <View style={styles.chipsContainer}>
                         <View style={styles.chip}>
                             <Text style={styles.chipText}>
-                                ⏱ {workout.duration}
+                                ⏱ {workout.estimatedDuration}
                             </Text>
                         </View>
 
                         <View style={styles.chip}>
                             <Text style={styles.chipText}>
-                                💪 {workout.exercises} Exercises
+                                💪 {workout.exerciseCount} Exercises
                             </Text>
                         </View>
 
@@ -76,7 +120,9 @@ export default function WorkoutScreen() {
 
 
                     {/* Exercise Grid */}
-                    <ExerciseCards />
+                    <ExerciseCards
+                        exercises={workout.exercises}
+                    />
 
 
                     {/* CTA */}
