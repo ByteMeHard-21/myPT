@@ -10,34 +10,155 @@ import {
     StyleSheet,
 } from "react-native";
 import { Activity, Dumbbell, Clock3 } from "lucide-react-native";
+import { router } from "expo-router";
 
 import Header from "../components/Header";
 import Calendar from "../components/Calendar";
 import ExerciseCards from "../components/ExerciseCards";
 import StartWorkoutButton from "../components/StartWorkoutButton";
 import { useAuthStore } from "../../../store/authStore";
-import { getCurrentWorkout } from "../workout.api";
-import { CurrentWorkout } from "../workout.types";
+import { getCurrentWorkout, advanceWorkoutDay } from "../workout.api";
+import { CurrentWorkout, WorkoutExercise, WorkoutOverview } from "../workout.types";
 import RecoveryScreen from "./EmptyWorkoutScreen";
+import { useWorkoutSessionStore } from "../../../store/workoutSessionStore";
+import { startWorkout, getActiveWorkoutSession } from "../workout.api";
+import { WorkoutSession, WorkoutSet } from "../../workoutSession/workoutSession.types";
 
 import { Colors, Radius, Spacing } from "../theme";
+import WorkoutCompletedScreen from "./WorkoutCompletedScreen";
+import { resumeWorkout } from "../../workoutSession/workoutSession.api";
 
-const workout = {
-    title: "Push Day",
-    subtitle: "Chest • Shoulders • Triceps",
-
-    duration: "58 min",
-    exercises: 8,
-    difficulty: "Moderate",
-};
 
 export default function WorkoutScreen() {
     const profile = useAuthStore(state => state.profile);
     const user = useAuthStore((state) => state.session);
-    const [workout, setWorkout] =
-        useState<CurrentWorkout | null>(null);
+    const [overview, setOverview] =
+        useState<WorkoutOverview | null>(null);
+
+    const [activeSession, setActiveSession] =
+        useState<WorkoutSession | null>(null);
+
+    const setWorkoutSession = useWorkoutSessionStore(
+        (state) => state.setWorkoutSession
+    );
+
+    const setSets = useWorkoutSessionStore(
+        (state) => state.setSets
+    );
+
 
     const [loading, setLoading] = useState(true);
+
+    async function handleResumeWorkout() {
+
+        if (!activeSession) return;
+
+        try {
+
+            await resumeWorkout(
+                activeSession.sessionId
+            );
+
+            const exercise =
+                activeSession.exercises[
+                activeSession.currentExerciseIndex
+                ];
+
+            const recommendedReps =
+                Number(
+                    exercise.reps.split("-")[0]
+                ) || 0;
+
+            const runtimeSets: WorkoutSet[] =
+                Array.from(
+                    {
+                        length: exercise.sets,
+                    },
+                    (_, index) => ({
+                        setNumber:
+                            index + 1,
+
+                        targetReps:
+                            recommendedReps,
+
+                        enteredWeight: "",
+
+                        enteredReps: "",
+
+                        completed: false,
+                    })
+                );
+
+            activeSession.status =
+                "in_progress";
+
+            activeSession.runningSince =
+                new Date().toISOString();
+
+            setWorkoutSession(
+                activeSession
+            );
+
+            setSets(runtimeSets);
+
+            router.push(
+                "/workoutsession"
+            );
+
+        } catch (error) {
+
+            console.log(error);
+
+        }
+
+    }
+
+    async function handleStartWorkout() {
+        if (!user || !workout) return;
+
+        try {
+            const session = await startWorkout(
+                user.user.id,
+                workout
+            );
+
+            const currentExercise =
+                session.exercises[
+                session.currentExerciseIndex
+                ];
+
+            const recommendedReps =
+                Number(
+                    currentExercise.reps.split("-")[0]
+                ) || 0;
+
+            const runtimeSets: WorkoutSet[] = Array.from(
+                {
+                    length: currentExercise.sets,
+                },
+                (_, index) => ({
+                    setNumber: index + 1,
+
+
+                    targetReps: recommendedReps,
+
+                    enteredWeight: "",
+
+                    enteredReps: "",
+
+                    completed: false,
+                })
+            );
+
+            setWorkoutSession(session);
+
+            setSets(runtimeSets);
+
+            router.push("/workoutsession");
+        } catch (error) {
+            console.log(error);
+        }
+    }
 
     useEffect(() => {
         if (!user) return;
@@ -46,9 +167,22 @@ export default function WorkoutScreen() {
 
         async function loadWorkout() {
             try {
+                await advanceWorkoutDay(userId);
+
+                const existing =
+                    await getActiveWorkoutSession(
+                        userId
+                    );
+
+                if (existing) {
+
+                    setActiveSession(existing);
+
+                }
+
                 const data = await getCurrentWorkout(userId);
 
-                setWorkout(data);
+                setOverview(data);
             } catch (err) {
                 console.log(err);
             } finally {
@@ -63,9 +197,23 @@ export default function WorkoutScreen() {
         return null;
     }
 
-    if (!workout) {
+    if (!overview) {
+        return null;
+    }
+
+    if (
+        overview.status === "no_workout"
+    ) {
         return <RecoveryScreen />;
     }
+
+    if (
+        overview.status === "completed_today"
+    ) {
+        return <WorkoutCompletedScreen />;
+    }
+
+    const workout = overview.workout!;
 
     return (
         <SafeAreaView style={styles.container}>
@@ -141,7 +289,18 @@ export default function WorkoutScreen() {
 
                     {/* CTA */}
                     <View style={{ height: 28 }} />
-                    <StartWorkoutButton />
+                    <StartWorkoutButton
+                        title={
+                            activeSession
+                                ? "Resume Workout"
+                                : "Start Workout"
+                        }
+                        onPress={
+                            activeSession
+                                ? handleResumeWorkout
+                                : handleStartWorkout
+                        }
+                    />
                 </View>
             </ScrollView>
         </SafeAreaView>

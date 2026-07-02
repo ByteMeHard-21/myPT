@@ -1,22 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
     View,
     Text,
-    StyleSheet,
     TouchableOpacity,
     TextInput,
+    StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-export interface SetData {
-    set: number;
-    weight: number | "";
-    reps: number | "";
-    completed: boolean;
-}
+import { WorkoutSet } from "../workoutSession.types";
 
 interface Props {
-    sets: SetData[];
+    sets: WorkoutSet[];
+    activeUndoSet: number | null;
+
     onToggleSet: (setNumber: number) => void;
     onWeightChange: (setNumber: number, value: string) => void;
     onRepsChange: (setNumber: number, value: string) => void;
@@ -24,40 +21,26 @@ interface Props {
 
 export default function SetTracker({
     sets,
+    activeUndoSet,
     onToggleSet,
     onWeightChange,
     onRepsChange,
 }: Props) {
 
-    const [activeRow, setActiveRow] = useState<number | null>(null);
-    useEffect(() => {
-        const lastCompleted = sets
-            .filter((item) => item.completed)
-            .map((item) => item.set)
-            .pop(); // get most recent completed set
-
-        if (!lastCompleted) return;
-
-        setActiveRow(lastCompleted);
-
-        const timer = setTimeout(() => {
-            setActiveRow(null);
-        }, 5000);
-
-        return () => clearTimeout(timer);
-    }, [sets]);
-
-    const isRowComplete = (item: SetData) => {
+    const isRowComplete = (item: WorkoutSet) => {
         return (
-            item.weight !== "" &&
-            item.reps !== "" &&
-            Number(item.weight) > 0 &&
-            Number(item.reps) > 0
+            item.enteredWeight !== "" &&
+            item.enteredReps !== "" &&
+            Number(item.enteredWeight) > 0 &&
+            Number(item.enteredReps) > 0
         );
     };
 
+
+
     return (
         <View style={styles.container}>
+
             {/* Header */}
             <View style={styles.header}>
                 <View style={styles.checkboxHeader} />
@@ -76,33 +59,29 @@ export default function SetTracker({
             </View>
 
             {sets.map((item, index) => (
-                <React.Fragment key={item.set}>
+                <React.Fragment key={item.setNumber}>
+
                     <View
                         style={[
                             styles.row,
-                            activeRow === item.set &&
+                            activeUndoSet === item.setNumber &&
                             styles.completedRow,
                         ]}
                     >
+
                         {/* Checkbox */}
                         <TouchableOpacity
-                            disabled={!isRowComplete(item)}
-                            onPress={() => {
-                                onToggleSet(item.set);
-
-                                // Show border only for the currently completed row
-                                setActiveRow(item.set);
-
-                                setTimeout(() => {
-                                    setActiveRow((current) =>
-                                        current === item.set ? null : current
-                                    );
-                                }, 5000);
-                            }}
+                            disabled={
+                                !isRowComplete(item) ||
+                                item.completed
+                            }
+                            onPress={() => onToggleSet(item.setNumber)}
                             style={[
                                 styles.checkbox,
-                                item.completed && styles.checkboxCompleted,
-                                !isRowComplete(item) && styles.checkboxDisabled,
+                                item.completed &&
+                                styles.checkboxCompleted,
+                                !isRowComplete(item) &&
+                                styles.checkboxDisabled,
                             ]}
                         >
                             {item.completed && (
@@ -116,7 +95,9 @@ export default function SetTracker({
 
                         {/* Set */}
                         <View style={styles.setColumn}>
-                            <Text style={styles.setNumber}>{item.set}</Text>
+                            <Text style={styles.setNumber}>
+                                {item.setNumber}
+                            </Text>
                         </View>
 
                         {/* Weight */}
@@ -126,11 +107,13 @@ export default function SetTracker({
                                     style={styles.input}
                                     keyboardType="number-pad"
                                     value={
-                                        item.weight === "" ? "" : String(item.weight)
+                                        item.enteredWeight === ""
+                                            ? ""
+                                            : String(item.enteredWeight)
                                     }
                                     onChangeText={(text) =>
                                         onWeightChange(
-                                            item.set,
+                                            item.setNumber,
                                             text.replace(/[^0-9]/g, "")
                                         )
                                     }
@@ -138,7 +121,6 @@ export default function SetTracker({
                                     placeholderTextColor="#8FA5A0"
                                     maxLength={3}
                                 />
-
                                 <Text style={styles.unit}>kg</Text>
                             </View>
                         </View>
@@ -149,10 +131,14 @@ export default function SetTracker({
                                 <TextInput
                                     style={styles.input}
                                     keyboardType="number-pad"
-                                    value={item.reps === "" ? "" : String(item.reps)}
+                                    value={
+                                        item.enteredReps === ""
+                                            ? String(item.targetReps ?? "")
+                                            : String(item.enteredReps)
+                                    }
                                     onChangeText={(text) =>
                                         onRepsChange(
-                                            item.set,
+                                            item.setNumber,
                                             text.replace(/[^0-9]/g, "")
                                         )
                                     }
@@ -162,18 +148,23 @@ export default function SetTracker({
                                 />
                             </View>
                         </View>
+
                     </View>
 
                     {index !== sets.length - 1 && (
                         <View style={styles.divider} />
                     )}
+
                 </React.Fragment>
             ))}
+
         </View>
     );
 }
 
+
 const styles = StyleSheet.create({
+    // Keep your existing stylesheet exactly as it is.
     container: {
         marginTop: 18,
         backgroundColor: "#163B37",
@@ -295,4 +286,5 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         marginLeft: 4,
     },
+
 });

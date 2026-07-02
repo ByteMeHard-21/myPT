@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
     SafeAreaView,
     ScrollView,
@@ -9,92 +9,362 @@ import {
     TouchableOpacity,
     Modal
 } from "react-native";
+import { Animated, Easing } from "react-native";
 import { Fullscreen } from "lucide-react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { VideoView, useVideoPlayer } from 'expo-video';
+import { WorkoutSessionExercise } from "./workoutSession.types";
+import { WorkoutSet } from "./workoutSession.types"
+import { router } from "expo-router";
 
 import WorkoutHeader from "./components/WorkoutHeader";
-import SetTracker, { SetData } from "./components/SetTracker";
+import SetTracker from "./components/SetTracker";
 import WorkoutAccordion from "./components/WorkoutAccordion";
+import { useWorkoutSessionStore } from "../../store/workoutSessionStore";
+import RestTimerOverlay from "./components/RestTimerOverlay";
+import { completeExercise, finishWorkout, pauseWorkout } from "../workoutSession/workoutSession.api";
+import { useAuthStore } from "../../store/authStore";
+import { getWorkoutElapsedSeconds } from "../../utils/workoutTimer";
+
 
 export default function WorkoutSessionScreen() {
-    const [sets, setSets] = useState<SetData[]>([
-        {
-            set: 1,
-            weight: 55,
-            reps: 10,
-            completed: true,
-        },
-        {
-            set: 2,
-            weight: 55,
-            reps: 10,
-            completed: false,
-        },
-        {
-            set: 3,
-            weight: "",
-            reps: "",
-            completed: false,
-        },
-        {
-            set: 4,
-            weight: "",
-            reps: "",
-            completed: false,
-        },
-    ]);
+
+    const {
+        session,
+        currentExerciseIndex,
+        sets,
+        updateWeight,
+        updateReps,
+        toggleCompleted,
+        nextExercise,
+
+        isResting,
+        restSecondsRemaining,
+        startRest,
+        stopRest,
+        pauseSession,
+        tickRest,
+    } = useWorkoutSessionStore();
+
     const [showFullscreenGif, setShowFullscreenGif] = useState(false);
+    const [undoVisible, setUndoVisible] = useState(false);
+    const [undoSet, setUndoSet] = useState<number | null>(null);
+    const toastAnim = useRef(new Animated.Value(0)).current;
+    const [initialRestSeconds, setInitialRestSeconds] = useState(0);
+    const [elapsed, setElapsed] = useState(0);
+
+    const user = useAuthStore(
+        (state) => state.session
+    );
+
+    const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const scrollViewRef = useRef<ScrollView>(null);
+
+    const buildRuntimeSets = (
+        exercise: WorkoutSessionExercise
+    ): WorkoutSet[] => {
+        const recommendedReps =
+            Number(exercise.reps.split("-")[0]) || 0;
+
+        return Array.from(
+            { length: exercise.sets },
+            (_, index) => ({
+                setNumber: index + 1,
+
+                targetReps: recommendedReps,
+
+                enteredWeight: "",
+
+                enteredReps: "",
+
+                completed: false,
+            })
+        );
+    };
 
     const toggleSet = (setNumber: number) => {
-        setSets((prev) =>
-            prev.map((item) =>
-                item.set === setNumber
-                    ? {
-                        ...item,
-                        completed: !item.completed,
-                    }
-                    : item
-            )
-        );
+        toggleCompleted(setNumber);
+        setInitialRestSeconds(exercise.restSeconds);
+
+        startRest(exercise.restSeconds);
+
+        setUndoSet(setNumber);
+        setUndoVisible(true);
+
+        Animated.spring(toastAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            damping: 14,
+            stiffness: 180,
+        }).start();
+
+        if (undoTimer.current) {
+            clearTimeout(undoTimer.current);
+        }
+
+        undoTimer.current = setTimeout(() => {
+            setUndoVisible(false);
+            setUndoSet(null);
+        }, 5000);
+    };
+
+    const undoComplete = () => {
+        if (undoSet == null) return;
+
+        // Unmark the set
+        toggleCompleted(undoSet);
+
+        // Stop the active rest timer
+        stopRest();
+
+        // Reset local timer state
+        setInitialRestSeconds(0);
+
+        if (undoTimer.current) {
+            clearTimeout(undoTimer.current);
+        }
+
+        hideToast();
     };
 
     const onWeightChange = (setNumber: number, value: string) => {
-        setSets((prev) =>
-            prev.map((item) =>
-                item.set === setNumber
-                    ? {
-                        ...item,
-                        weight: value === "" ? "" : Number(value),
-                    }
-                    : item
-            )
-        );
+        updateWeight(setNumber, value === "" ? "" : Number(value));
     };
 
     const onRepsChange = (setNumber: number, value: string) => {
-        setSets((prev) =>
-            prev.map((item) =>
-                item.set === setNumber
-                    ? {
-                        ...item,
-                        reps: value === "" ? "" : Number(value),
-                    }
-                    : item
-            )
-        );
+        updateReps(setNumber, value === "" ? "" : Number(value));
     };
+
+    const hideToast = () => {
+        Animated.timing(toastAnim, {
+            toValue: 0,
+            duration: 220,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+        }).start(() => {
+            setUndoVisible(false);
+            setUndoSet(null);
+        });
+    };
+
+    const addThirtySeconds = () => {
+        setInitialRestSeconds(prev => prev + 30);
+
+        startRest(restSecondsRemaining + 30);
+    };
+
+    const skipRest = () => {
+        stopRest();
+        hideToast();
+    };
+
+    if (!session) return null;
+
+    const exercise = session.exercises?.[currentExerciseIndex];
+
+    if (!exercise) return null;
+
+    const progressText =
+        `${currentExerciseIndex + 1} / ${session.exercises.length}`;
+
+    const player = useVideoPlayer(exercise.videoUrl, player => {
+        player.loop = true;
+        player.play();
+        player.muted = true;
+    });
+
+    const fullscreenPlayer = useVideoPlayer(exercise.videoUrl, (player) => {
+        player.loop = true;
+        player.muted = true;
+    });
+
+    useEffect(() => {
+        if (showFullscreenGif) {
+            player.pause();
+            fullscreenPlayer.play();
+        } else {
+            fullscreenPlayer.pause();
+            player.play();
+        }
+    }, [showFullscreenGif]);
+
+    useEffect(() => {
+        if (!isResting) return;
+        const timer = setInterval(() => {
+            tickRest();
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [isResting]);
+
+    useEffect(() => {
+        if (!isResting) return;
+        if (restSecondsRemaining <= 0) {
+            stopRest();
+            if (undoVisible) {
+                hideToast();
+            }
+        }
+    }, [restSecondsRemaining]);
+
+    useEffect(() => {
+        scrollViewRef.current?.scrollTo({
+            y: 0,
+            animated: true,
+        });
+    }, [currentExerciseIndex]);
+
+    useEffect(() => {
+
+        if (!session) return;
+
+        const timer = setInterval(() => {
+
+            setElapsed(
+                getWorkoutElapsedSeconds(
+                    session.elapsedSeconds,
+                    session.runningSince
+                )
+            );
+
+        }, 1000);
+
+        return () => clearInterval(timer);
+
+    }, [
+        session
+    ]);
+
+
+    async function handleNextExercise() {
+
+        if (!session || !user) return;
+
+        //---------------------------------------------------
+        // Validate
+        //---------------------------------------------------
+
+        const allCompleted = sets.every(
+            (set) => set.completed
+        );
+
+        if (!allCompleted) {
+            // TODO:
+            // show snackbar
+            // "Complete all sets first"
+            return;
+        }
+
+        //---------------------------------------------------
+        // Current Exercise
+        //---------------------------------------------------
+
+        const currentExercise =
+            session.exercises[currentExerciseIndex];
+
+        const nextExerciseData =
+            session.exercises[currentExerciseIndex + 1];
+
+        try {
+
+            //---------------------------------------------------
+            // Commit Exercise
+            //---------------------------------------------------
+
+            await completeExercise(
+                session.sessionId,
+                user.user.id,
+                currentExercise.planExerciseId,
+                currentExercise.exerciseId,
+                sets,
+                nextExerciseData
+                    ? nextExerciseData.planExerciseId
+                    : null
+            );
+
+            //---------------------------------------------------
+            // Pause Exercise?
+            //---------------------------------------------------
+
+
+            //---------------------------------------------------
+            // Last Exercise?
+            //---------------------------------------------------
+
+            if (!nextExerciseData) {
+                console.log("1. About to finish workout");
+
+                await finishWorkout(session.sessionId);
+
+                console.log("2. finishWorkout completed");
+
+                console.log("3. Navigating to summary");
+
+                router.replace({
+                    pathname: "/workoutsummary",
+                    params: {
+                        sessionId: session.sessionId,
+                    },
+                });
+
+                console.log("4. Navigation called");
+
+                return;
+            }
+
+            //---------------------------------------------------
+            // Build runtime sets
+            //---------------------------------------------------
+
+            const runtimeSets =
+                buildRuntimeSets(nextExerciseData);
+
+            //---------------------------------------------------
+            // Next Exercise
+            //---------------------------------------------------
+
+            nextExercise(runtimeSets);
+
+        } catch (error) {
+
+            console.log(error);
+
+        }
+
+    }
+
+    async function handlePauseWorkout() {
+
+        if (!session) return;
+
+        try {
+
+            await pauseWorkout(
+                session.sessionId
+            );
+
+            pauseSession();
+
+            router.back();
+
+        } catch (error) {
+
+            console.log(error);
+
+        }
+
+    }
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={{ marginTop: 20 }} />
             <WorkoutHeader
-                workoutName="Push Day"
-                currentExercise={3}
-                totalExercises={8}
+                workoutName={session?.title ?? ""}
+                currentExercise={currentExerciseIndex + 1}
+                totalExercises={session.exercises.length}
                 onBackPress={() => { }}
             />
 
             <ScrollView
+                ref={scrollViewRef}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.content}
             >
@@ -102,10 +372,11 @@ export default function WorkoutSessionScreen() {
 
                 <View style={styles.exerciseCard}>
                     <View style={styles.imageContainer}>
-                        <Image
-                            source={require("../../../assets/workout/lat_pulldown.gif")}
+                        <VideoView
                             style={styles.image}
-                            resizeMode="contain"
+                            player={player}
+                            contentFit="contain"
+                            nativeControls={false}
                         />
 
                         <TouchableOpacity
@@ -123,19 +394,19 @@ export default function WorkoutSessionScreen() {
                     <View style={styles.exerciseInfo}>
                         <View style={styles.titleRow}>
                             <Text style={styles.exerciseName}>
-                                Bench Press
+                                {exercise.name}
                             </Text>
 
                             <View style={styles.levelBadge}>
                                 <Text style={styles.levelText}>
-                                    Beginner
+                                    {exercise.difficulty}
                                 </Text>
                             </View>
                         </View>
 
                         <View style={styles.tags}>
                             <View style={styles.tag}>
-                                <Text style={styles.tagText}>Chest</Text>
+                                <Text style={styles.tagText}>{exercise.primaryMuscle}</Text>
                             </View>
 
                             <View style={styles.tag}>
@@ -167,9 +438,7 @@ export default function WorkoutSessionScreen() {
                     </View>
 
                     <Text style={styles.coachText}>
-                        Keep your shoulder blades retracted
-                        throughout the movement to maximize
-                        chest activation.
+                        {exercise.tips}
                     </Text>
                 </View>
 
@@ -177,6 +446,7 @@ export default function WorkoutSessionScreen() {
 
                 <SetTracker
                     sets={sets}
+                    activeUndoSet={undoSet}
                     onToggleSet={toggleSet}
                     onWeightChange={onWeightChange}
                     onRepsChange={onRepsChange}
@@ -186,59 +456,85 @@ export default function WorkoutSessionScreen() {
 
                 <WorkoutAccordion
                     title="Instructions"
-                    content="1. Lie flat on the bench.
-2. Grip the bar slightly wider than shoulder width.
-3. Lower the bar to your chest.
-4. Press back up while exhaling."
+                    content={exercise.instructions ?? ""}
                 />
 
                 <WorkoutAccordion
                     title="Common Mistakes"
-                    content="• Bouncing the bar
-• Flaring elbows too much
-• Lifting hips off the bench
-• Locking elbows aggressively"
+                    content={exercise.commonMistakes ?? ""}
                 />
 
                 {/* Bottom Buttons */}
 
                 {/* Secondary Actions */}
                 <View style={styles.sectionDivider} />
-                <View style={styles.actionContainer}>
 
-                    <Text style={styles.actionTitle}>
-                        ACTIONS
-                    </Text>
-                    <View style={styles.secondaryActionRow}>
-                        <TouchableOpacity
-                            activeOpacity={0.85}
-                            style={styles.secondaryButton}
-                        >
-                            <Ionicons
-                                name="sparkles"
-                                size={20}
-                                color="#A3E635"
-                            />
+                <View style={styles.controlPanel}>
 
-                            <Text style={styles.secondaryButtonText}>
-                                Ask AI
+                    <View style={styles.controlHeader}>
+                        <Ionicons
+                            name="fitness"
+                            size={18}
+                            color="#A3E635"
+                        />
+
+                        <Text style={styles.controlTitle}>
+                            Workout Controls
+                        </Text>
+                    </View>
+
+                    <View style={styles.coachStatus}>
+                        <Ionicons
+                            name="flash"
+                            size={16}
+                            color="#A3E635"
+                        />
+
+                        <Text style={styles.coachStatusText}>
+                            Great pace! Only 2 exercises remaining.
+                        </Text>
+                    </View>
+
+                    {/* Feature Cards */}
+
+                    <View style={styles.featureRow}>
+
+                        <TouchableOpacity style={styles.featureCard}>
+                            <View style={styles.featureIcon}>
+                                <Ionicons
+                                    name="sparkles"
+                                    size={24}
+                                    color="#A3E635"
+                                />
+                            </View>
+
+                            <Text style={styles.featureTitle}>
+                                Ask Coach
+                            </Text>
+
+                            <Text style={styles.featureSubtitle}>
+                                AI Guidance
                             </Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity
-                            activeOpacity={0.85}
-                            style={styles.secondaryButton}
-                        >
-                            <Ionicons
-                                name="swap-horizontal"
-                                size={20}
-                                color="#A3E635"
-                            />
+                        <TouchableOpacity style={styles.featureCard}>
+                            <View style={styles.featureIcon}>
+                                <Ionicons
+                                    name="swap-horizontal"
+                                    size={24}
+                                    color="#A3E635"
+                                />
+                            </View>
 
-                            <Text style={styles.secondaryButtonText}>
+                            <Text style={styles.featureTitle}>
                                 Swap Exercise
                             </Text>
+
+                            <Text style={styles.featureSubtitle}>
+                                Same Muscle
+                            </Text>
                         </TouchableOpacity>
+
                     </View>
 
                     {/* Primary Actions */}
@@ -262,7 +558,7 @@ export default function WorkoutSessionScreen() {
                         <TouchableOpacity
                             activeOpacity={0.9}
                             style={styles.nextButton}
-                        >
+                            onPress={handleNextExercise} >
                             <Text style={styles.nextText}>
                                 Next Exercise
                             </Text>
@@ -278,18 +574,12 @@ export default function WorkoutSessionScreen() {
                     {/* Pause */}
 
                     <TouchableOpacity
-                        activeOpacity={0.7}
-                        style={styles.pauseButton}
+                        style={styles.endWorkoutBtn}
+                        activeOpacity={0.8}
+                        onPress={handlePauseWorkout}
                     >
-                        <Ionicons
-                            name="pause-circle-outline"
-                            size={18}
-                            color="rgba(255,255,255,0.45)"
-                        />
-
-                        <Text style={styles.pauseText}>
-                            Pause & Exit
-                        </Text>
+                        <Ionicons name="pause-circle-outline" size={20} color="#EF4444" />
+                        <Text style={styles.endWorkoutText}> Pause & End Workout </Text>
                     </TouchableOpacity>
                 </View>
 
@@ -316,15 +606,78 @@ export default function WorkoutSessionScreen() {
                             </Text>
                         </View>
 
-                        <Image
-                            source={require("../../../assets/workout/lat_pulldown.gif")}
-                            resizeMode="contain"
-                            style={styles.fullscreenImage}
+                        <VideoView
+                            player={fullscreenPlayer}
+                            style={styles.fullscreenVideo}
+                            nativeControls={false}
+                            contentFit="contain"
                         />
                     </View>
                 </Modal>
 
             </ScrollView>
+            <RestTimerOverlay
+                visible={isResting}
+                remainingSeconds={restSecondsRemaining}
+                initialSeconds={initialRestSeconds}
+                onAdd30={addThirtySeconds}
+                onSkip={skipRest}
+            />
+
+            {undoVisible && (
+                <Animated.View
+                    style={[
+                        styles.toast,
+                        {
+                            opacity: toastAnim,
+                            transform: [
+                                {
+                                    translateY: toastAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [40, 0],
+                                    }),
+                                },
+                                {
+                                    scale: toastAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.95, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                >
+                    <View style={styles.toastIcon}>
+                        <Ionicons
+                            name="checkmark"
+                            size={18}
+                            color="#082320"
+                        />
+                    </View>
+
+                    <View style={styles.toastContent}>
+                        <Text style={styles.toastTitle}>
+                            Set {undoSet} Completed
+                        </Text>
+
+                        <Text style={styles.toastSubtitle}>
+                            Tap Undo to restore this set.
+                        </Text>
+                    </View>
+
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={undoComplete}
+                        style={styles.undoButton}
+                    >
+                        <Text style={styles.undoText}>
+                            UNDO
+                        </Text>
+                    </TouchableOpacity>
+                </Animated.View>
+            )}
+
+
         </SafeAreaView>
     );
 }
@@ -337,6 +690,7 @@ const styles = StyleSheet.create({
 
     content: {
         padding: 10,
+        paddingTop: 30,
         paddingBottom: 40,
     },
 
@@ -396,12 +750,6 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
 
-    bottomRow: {
-        marginTop: 12,
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
 
     tags: {
         flexDirection: "row",
@@ -462,32 +810,6 @@ const styles = StyleSheet.create({
         marginTop: 26,
         marginBottom: 26,
     },
-
-    actionContainer: {
-        backgroundColor: "#102E2C",
-        borderRadius: 24,
-        borderWidth: 1,
-        borderColor: "#2A4B45",
-        padding: 20,
-        shadowColor: "#000",
-        shadowOpacity: 0.18,
-        shadowRadius: 18,
-        shadowOffset: {
-            width: 0,
-            height: 8,
-        },
-        elevation: 6,
-    },
-
-    actionTitle: {
-        color: "rgba(255,255,255,0.45)",
-        fontSize: 12,
-        fontWeight: "700",
-        letterSpacing: 2,
-        marginBottom: 18,
-    },
-
-
     coachIcon: {
         width: 28,
         height: 28,
@@ -509,54 +831,79 @@ const styles = StyleSheet.create({
         lineHeight: 22,
     },
 
-    actionRow: {
+    controlPanel: {
+        marginTop: 8,
+        backgroundColor: "#102E2C",
+        borderRadius: 28,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: "rgba(163,230,53,.08)",
+    },
+
+    controlHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+
+    controlTitle: {
+        color: "#FFFFFF",
+        fontSize: 18,
+        fontWeight: "700",
+        marginLeft: 10,
+    },
+
+    coachStatus: {
+        marginTop: 18,
+        backgroundColor: "rgba(163,230,53,.06)",
+        borderRadius: 16,
+        padding: 14,
+        flexDirection: "row",
+        alignItems: "center",
+    },
+
+    coachStatusText: {
+        marginLeft: 10,
+        color: "#FFFFFF",
+        fontSize: 14,
+        flex: 1,
+    },
+
+    featureRow: {
         flexDirection: "row",
         justifyContent: "space-between",
         marginTop: 20,
     },
 
-    secondaryButton: {
+    featureCard: {
         width: "48%",
-        height: 56,
-        backgroundColor: "#2B5953",
-        borderRadius: 18,
-
+        backgroundColor: "#21504A",
+        borderRadius: 20,
+        paddingVertical: 18,
+        alignItems: "center",
         borderWidth: 1,
-        borderColor: "#2A4B45",
+        borderColor: "rgba(163,230,53,.12)",
+    },
 
-        flexDirection: "row",
+    featureIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: "rgba(163,230,53,.08)",
         justifyContent: "center",
         alignItems: "center",
-        shadowColor: "#000",
-
-        shadowOpacity: .12,
-
-        shadowRadius: 10,
-
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-
-        elevation: 3,
     },
 
-    secondaryText: {
+    featureTitle: {
         color: "#FFFFFF",
-        marginLeft: 8,
-        fontWeight: "600",
+        fontWeight: "700",
+        fontSize: 15,
+        marginTop: 14,
     },
 
-    bottomRowButtons: {
-        marginTop: 24,
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
-
-    skip: {
-        color: "rgba(255,255,255,0.5)",
-        textDecorationLine: "underline",
+    featureSubtitle: {
+        color: "rgba(255,255,255,.55)",
+        fontSize: 12,
+        marginTop: 5,
     },
 
     nextButton: {
@@ -589,12 +936,25 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
 
-    exit: {
-        marginTop: 30,
-        color: "#EF4444",
-        textAlign: "center",
-        fontWeight: "600",
+    endWorkoutBtn: {
+        marginTop: 20,
+        height: 56,
+        borderRadius: 18,
+        borderWidth: 1.5,
+        borderColor: "rgba(239,68,68,0.25)",
+        backgroundColor: "rgba(239,68,68,0.12)",
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 10,
     },
+
+    endWorkoutText: {
+        color: "#EF4444",
+        fontSize: 15,
+        fontWeight: "700",
+    },
+
     fullscreenContainer: {
         flex: 1,
         backgroundColor: "#082320",
@@ -623,24 +983,9 @@ const styles = StyleSheet.create({
         fontWeight: "700",
     },
 
-    fullscreenImage: {
+    fullscreenVideo: {
         flex: 1,
         width: "100%",
-        height: undefined,
-    },
-    secondaryActionRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 26,
-    },
-
-
-
-    secondaryButtonText: {
-        color: "#FFFFFF",
-        fontSize: 15,
-        fontWeight: "600",
-        marginLeft: 8,
     },
 
     primaryActionRow: {
@@ -674,21 +1019,87 @@ const styles = StyleSheet.create({
     },
 
 
-    pauseButton: {
-        marginTop: 24,
+    toast: {
+        position: "absolute",
+
+        left: 16,
+        right: 16,
+        bottom: 22,
 
         flexDirection: "row",
+        alignItems: "center",
+
+        backgroundColor: "#21504A",
+
+        borderRadius: 22,
+
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+
+        borderWidth: 1,
+        borderColor: "rgba(163,230,53,.25)",
+
+        shadowColor: "#000",
+        shadowOpacity: 0.30,
+        shadowRadius: 18,
+        shadowOffset: {
+            width: 0,
+            height: 8,
+        },
+
+        zIndex: 9999,
+        elevation: 999,
+    },
+
+    toastIcon: {
+        width: 42,
+        height: 42,
+
+        borderRadius: 21,
+
+        backgroundColor: "#A3E635",
+
         justifyContent: "center",
         alignItems: "center",
     },
 
-    pauseText: {
-        marginLeft: 6,
+    toastContent: {
+        flex: 1,
+        marginHorizontal: 14,
+    },
 
-        color: "rgba(255,255,255,0.45)",
+    toastTitle: {
+        color: "#FFFFFF",
+        fontSize: 15,
+        fontWeight: "700",
+    },
 
-        fontSize: 14,
+    toastSubtitle: {
+        marginTop: 2,
 
-        fontWeight: "600",
+        color: "rgba(255,255,255,.65)",
+
+        fontSize: 12,
+    },
+
+    undoButton: {
+        paddingHorizontal: 18,
+        paddingVertical: 10,
+
+        borderRadius: 999,
+
+        backgroundColor: "rgba(163,230,53,.12)",
+
+        borderWidth: 1,
+
+        borderColor: "rgba(163,230,53,.25)",
+    },
+
+    undoText: {
+        color: "#A3E635",
+
+        fontSize: 12,
+
+        fontWeight: "700",
     },
 });

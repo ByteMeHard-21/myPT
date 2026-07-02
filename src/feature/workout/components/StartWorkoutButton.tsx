@@ -3,25 +3,34 @@ import {
     TouchableOpacity,
     Text,
     StyleSheet,
+    GestureResponderEvent,
 } from "react-native";
 
 import { useRouter } from "expo-router";
 
 import { Colors, Radius, Spacing } from "../theme";
+interface StartWorkoutButtonProps {
+    onPress: (event: GestureResponderEvent) => void;
+    title?: string;
+    disabled?: boolean;
+}
 
-const StartWorkoutButton = () => {
+const StartWorkoutButton = ({
+    onPress,
+    title = "Start Workout",
+    disabled = false,
+}: StartWorkoutButtonProps) => {
     const router = useRouter();
 
     return (
         <TouchableOpacity
             activeOpacity={0.9}
             style={styles.button}
-            onPress={() =>
-                router.push("/workout")
-            }
+            onPress={onPress}
+            disabled={disabled}
         >
             <Text style={styles.text}>
-                Start Workout
+                {title}
             </Text>
         </TouchableOpacity>
     );

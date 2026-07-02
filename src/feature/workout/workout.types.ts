@@ -10,12 +10,11 @@ export interface WorkoutExercise {
 }
 
 export interface CurrentWorkout {
-    id: string;
+    planId: string;
+    planDayId: string;
 
     title: string;
-
     subtitle: string;
-
     dayName: string;
 
     difficulty: string;
@@ -25,4 +24,15 @@ export interface CurrentWorkout {
     exerciseCount: number;
 
     exercises: WorkoutExercise[];
+}
+
+export interface WorkoutOverview {
+
+    status:
+    | "available"
+    | "completed_today"
+    | "no_workout";
+
+    workout: CurrentWorkout | null;
+
 }
