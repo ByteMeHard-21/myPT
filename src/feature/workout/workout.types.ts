@@ -36,3 +36,9 @@ export interface WorkoutOverview {
     workout: CurrentWorkout | null;
 
 }
+
+export interface SwapExercise {
+    id: string;
+    name: string;
+    thumbnailUrl: string | null;
+}

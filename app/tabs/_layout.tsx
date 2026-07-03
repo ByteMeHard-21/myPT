@@ -1,8 +1,9 @@
-import { Tabs } from "expo-router";
+import { Tabs, Redirect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, Text, StyleSheet } from "react-native";
 
 import { Colors, Radius } from "../../src/feature/workout/theme"
+import { useAuthStore } from "../../src/store/authStore";
 
 const TabIcon = ({
     focused,
@@ -43,6 +44,17 @@ const TabIcon = ({
 };
 
 export default function TabsLayout() {
+    const session = useAuthStore((s) => s.session);
+    const isLoading = useAuthStore((s) => s.isLoading);
+
+    if (isLoading) {
+        return null;
+    }
+
+    if (!session) {
+        return <Redirect href="/auth/login" />;
+    }
+
     return (
         <Tabs
             screenOptions={{

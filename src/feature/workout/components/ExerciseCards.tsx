@@ -25,48 +25,6 @@ const INITIAL_ROWS = 3;
 const ITEMS_PER_ROW = 2;
 const INITIAL_VISIBLE = INITIAL_ROWS * ITEMS_PER_ROW;
 
-const exercises = [
-    {
-        id: "1",
-        name: "Bench Dip",
-        image: require("../../../../assets/workout/bench-dip.jpg"),
-    },
-    {
-        id: "2",
-        name: "Concentration Curls",
-        image: require("../../../../assets/workout/concentration-curl.jpg"),
-    },
-    {
-        id: "3",
-        name: "Cable Tricep",
-        image: require("../../../../assets/workout/cable-tricep-kickback.jpg"),
-    },
-    {
-        id: "4",
-        name: "Dumbbell Shrug",
-        image: require("../../../../assets/workout/dumbbell-shrug.jpg"),
-    },
-    {
-        id: "5",
-        name: "ez-Barbell Curls",
-        image: require("../../../../assets/workout/ez-bar-curl.jpg"),
-    },
-    {
-        id: "6",
-        name: "Glute Bridge",
-        image: require("../../../../assets/workout/glute-bridge.jpg"),
-    },
-    {
-        id: "7",
-        name: "Side Plank",
-        image: require("../../../../assets/workout/side-plank.jpg"),
-    },
-    {
-        id: "8",
-        name: "Sumo Squat",
-        image: require("../../../../assets/workout/sumo-squat.jpg"),
-    },
-];
 
 interface Props {
     exercises: WorkoutExercise[];

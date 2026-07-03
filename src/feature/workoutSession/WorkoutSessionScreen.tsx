@@ -291,23 +291,13 @@ export default function WorkoutSessionScreen() {
             //---------------------------------------------------
 
             if (!nextExerciseData) {
-                console.log("1. About to finish workout");
-
                 await finishWorkout(session.sessionId);
-
-                console.log("2. finishWorkout completed");
-
-                console.log("3. Navigating to summary");
-
                 router.replace({
                     pathname: "/workoutsummary",
                     params: {
                         sessionId: session.sessionId,
                     },
                 });
-
-                console.log("4. Navigation called");
-
                 return;
             }
 
@@ -517,7 +507,15 @@ export default function WorkoutSessionScreen() {
                             </Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.featureCard}>
+                        <TouchableOpacity style={styles.featureCard} onPress={() => {
+                            router.push({
+                                pathname: "/swapExercise", // adjust if your route is different
+                                params: {
+                                    planExerciseId: exercise.planExerciseId,
+                                    exerciseName: exercise.name,
+                                },
+                            });
+                        }}>
                             <View style={styles.featureIcon}>
                                 <Ionicons
                                     name="swap-horizontal"

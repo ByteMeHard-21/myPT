@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import {
     WorkoutSession,
+    WorkoutSessionExercise,
     WorkoutSet,
 } from "../feature/workoutSession/workoutSession.types";
 
@@ -61,6 +62,10 @@ interface WorkoutSessionState {
         sets: WorkoutSet[]
     ) => void;
 
+    replaceCurrentExercise: (
+        exercise: WorkoutSessionExercise
+    ) => void;
+
     startRest: (seconds: number) => void;
 
     tickRest: () => void;
@@ -77,7 +82,10 @@ interface WorkoutSessionState {
         commit: PendingCommit | null
     ) => void;
 
+
+
     clearWorkout: () => void;
+
 }
 
 export const useWorkoutSessionStore =
@@ -306,5 +314,30 @@ export const useWorkoutSessionStore =
                 restSecondsRemaining: 0,
 
                 pendingCommit: null,
+            }),
+
+        replaceCurrentExercise: (exercise) =>
+            set((state) => {
+
+                if (!state.session) {
+                    return state;
+                }
+
+                const exercises = [...state.session.exercises];
+
+                exercises[state.currentExerciseIndex] = exercise;
+
+                return {
+
+                    session: {
+
+                        ...state.session,
+
+                        exercises,
+
+                    },
+
+                };
+
             }),
     }));

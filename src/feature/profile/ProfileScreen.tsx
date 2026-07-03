@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
     View,
     Text,
@@ -25,6 +25,7 @@ import {
     deleteProfileImage,
 } from '../../services/avatar.service';
 import { supabase } from "../../services/supabase";
+import LogoutModal from "./components/LogoutModal";
 import { UserProfile } from "../auth/auth.types";
 
 import { updateAvatar } from './profile.api';
@@ -85,6 +86,7 @@ export default function ProfileScreen() {
     const bottomSheetRef = useRef<BottomSheet>(null);
     const profile = useAuthStore((state) => state.profile);
     const setProfile = useAuthStore((state) => state.setProfile);
+    const [logoutVisible, setLogoutVisible] = useState(false);
 
     const snapPoints = useMemo(() => ["36%"], []);
 
@@ -210,6 +212,12 @@ export default function ProfileScreen() {
         }
     };
 
+    const confirmLogout = async () => {
+        setLogoutVisible(false);
+
+        await supabase.auth.signOut();
+    };
+
     const formatText = (value?: string | null) =>
         value
             ? value.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())
@@ -264,7 +272,7 @@ export default function ProfileScreen() {
                 <AccountSection />
 
                 <Pressable
-                    onPress={() => console.log("Logout")}
+                    onPress={() => setLogoutVisible(true)}
                     style={({ pressed }) => [
                         styles.logoutButton,
                         pressed && styles.logoutButtonPressed,
@@ -360,6 +368,11 @@ export default function ProfileScreen() {
                     </Pressable>
                 </BottomSheetView>
             </BottomSheet>
+            <LogoutModal
+                visible={logoutVisible}
+                onCancel={() => setLogoutVisible(false)}
+                onConfirm={confirmLogout}
+            />
         </View>
     );
 }
