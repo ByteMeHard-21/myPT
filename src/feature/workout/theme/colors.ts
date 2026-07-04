@@ -1,25 +1,32 @@
 export const Colors = {
-    background: "#0B2D2A",
 
-    surface: "#143532",
+    // Backgrounds
+    background: "#101314",
 
-    surfaceElevated: "#19413C",
+    surface: "#171B1D",
 
+    surfaceElevated: "#1F2528",
+
+    // Accent
     primary: "#A3E635",
 
-    primaryGlow: "rgba(163,230,53,0.15)",
+    primaryGlow: "rgba(163,230,53,0.18)",
 
-    border: "#2A4B45",
+    // Border
+    border: "#2A3135",
 
+    divider: "#23282C",
+
+    // Text
     text: "#FFFFFF",
 
-    subText: "rgba(255,255,255,0.68)",
+    subText: "#A4ABB3",
 
-    muted: "rgba(255,255,255,0.45)",
+    muted: "#6D737A",
 
     success: "#A3E635",
 
-    danger: "#EF4444",
-
     warning: "#F59E0B",
-} as const;
+
+    danger: "#EF4444",
+};

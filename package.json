@@ -29,6 +29,7 @@
     "react-native-app-intro-slider": "^4.0.4",
     "react-native-awesome-slider": "^2.9.0",
     "react-native-gesture-handler": "~2.31.1",
+    "react-native-markdown-display": "^7.0.2",
     "react-native-paper": "^5.15.3",
     "react-native-reanimated": "4.3.1",
     "react-native-safe-area-context": "~5.7.0",

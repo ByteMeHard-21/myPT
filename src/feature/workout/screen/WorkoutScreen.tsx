@@ -8,6 +8,7 @@ import {
     View,
     Text,
     StyleSheet,
+    TouchableOpacity
 } from "react-native";
 import { Activity, Dumbbell, Clock3 } from "lucide-react-native";
 import { router } from "expo-router";
@@ -28,7 +29,6 @@ import { Colors, Radius, Spacing } from "../theme";
 import WorkoutCompletedScreen from "./WorkoutCompletedScreen";
 import { resumeWorkout } from "../../workoutSession/workoutSession.api";
 
-
 export default function WorkoutScreen() {
     const profile = useAuthStore(state => state.profile);
     const user = useAuthStore((state) => state.session);
@@ -46,6 +46,25 @@ export default function WorkoutScreen() {
         (state) => state.setSets
     );
 
+    const handleGetChatHistory = async () => {
+        try {
+            const res = await fetch(
+                "https://mgyiaoyxyqwdprgflhma.supabase.co/functions/v1/get-ai-chat-history",
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${user?.access_token}`,
+                    },
+                }
+            );
+
+            const data = await res.json();
+
+            console.log("CHAT HISTORY:", data);
+        } catch (err) {
+            console.log("FULL ERROR:", err);
+        }
+    };
 
     const [loading, setLoading] = useState(true);
 
@@ -249,7 +268,7 @@ export default function WorkoutScreen() {
                         <View style={styles.chip}>
                             <Clock3
                                 size={16}
-                                color={Colors.text}
+                                color={Colors.primary}
                                 strokeWidth={2.2}
                             />
                             <Text style={styles.chipText}>
@@ -260,7 +279,7 @@ export default function WorkoutScreen() {
                         <View style={styles.chip}>
                             <Dumbbell
                                 size={16}
-                                color={Colors.text}
+                                color={Colors.primary}
                                 strokeWidth={2.2}
                             />
                             <Text style={styles.chipText}>
@@ -271,7 +290,7 @@ export default function WorkoutScreen() {
                         <View style={styles.chip}>
                             <Activity
                                 size={16}
-                                color={Colors.text}
+                                color={Colors.primary}
                                 strokeWidth={2.2}
                             />
                             <Text style={styles.chipText}>
@@ -280,7 +299,7 @@ export default function WorkoutScreen() {
                         </View>
                     </View>
 
-
+                    <View style={styles.divider} />
                     {/* Exercise Grid */}
                     <ExerciseCards
                         exercises={workout.exercises}
@@ -288,7 +307,7 @@ export default function WorkoutScreen() {
 
 
                     {/* CTA */}
-                    <View style={{ height: 28 }} />
+                    <View style={{ height: Spacing.xl }} />
                     <StartWorkoutButton
                         title={
                             activeSession
@@ -302,6 +321,10 @@ export default function WorkoutScreen() {
                         }
                     />
                 </View>
+                <TouchableOpacity onPress={handleGetChatHistory}>
+                    <Text>Get Chat History</Text>
+                </TouchableOpacity>
+
             </ScrollView>
         </SafeAreaView>
     );
@@ -310,51 +333,48 @@ export default function WorkoutScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#0B2D2A",
+        backgroundColor: Colors.background,
     },
 
     content: {
-        paddingHorizontal: 7,
-        paddingBottom: 10,
+        paddingHorizontal: Spacing.sm,
+        paddingBottom: Spacing.md,
     },
 
     heroContainer: {
-        marginTop: 24,
-        backgroundColor: "#143532",
+        marginTop: Spacing.xl,
+        backgroundColor: Colors.surface,
         borderRadius: 28,
         padding: 20,
+        borderWidth: 1,
+        borderColor: Colors.border,
         shadowColor: "#000",
         shadowOffset: {
             width: 0,
             height: 8,
         },
-        shadowOpacity: 0.12,
+        shadowOpacity: 0.18,
         shadowRadius: 20,
         elevation: 8,
     },
 
     sectionTitle: {
-        color: "#A3E635",
-        fontSize: 13,
+        color: Colors.primary,
+        fontSize: 12,
         fontWeight: "700",
-        letterSpacing: 2,
+        letterSpacing: 1.8,
     },
 
     workoutTitle: {
         marginTop: 12,
-
-        color: "#FFFFFF",
-
+        color: Colors.text,
         fontSize: 34,
-
         fontWeight: "700",
     },
 
     subtitle: {
         marginTop: 8,
-
-        color: "#B7CBC6",
-
+        color: Colors.subText,
         fontSize: 16,
     },
 
@@ -368,14 +388,13 @@ const styles = StyleSheet.create({
 
     chip: {
         height: 36,
-        paddingHorizontal: 16,
-        backgroundColor: "#19413C",
+        paddingHorizontal: 14,
         borderRadius: Radius.pill,
-
+        backgroundColor: Colors.surfaceElevated,
+        borderWidth: 1,
+        borderColor: Colors.border,
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "center",
-
         marginRight: 10,
         marginBottom: 10,
     },
@@ -387,4 +406,9 @@ const styles = StyleSheet.create({
         fontWeight: "600",
     },
 
+    divider: {
+        height: 1,
+        backgroundColor: Colors.divider,
+        marginBottom: 24,
+    },
 });
