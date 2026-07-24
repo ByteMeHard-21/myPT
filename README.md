@@ -1,148 +1,407 @@
-# 🏋️ myPT -- AI Personal Fitness Coach
+# 🏋️ myPT – AI Personal Fitness Coach
 
-> **Your Personal AI Trainer**\
-> An AI-powered mobile fitness application that delivers personalized
-> workout plans, intelligent coaching, and progress tracking to help
-> users train with confidence.
+> **Your Personal AI Trainer**
+> An AI-powered mobile fitness application that delivers personalized workout plans, intelligent coaching, and progress tracking to help users train with confidence.
 
-## Overview
+---
 
-myPT is an AI-powered fitness coaching application built to solve one of
-the biggest challenges faced by beginner and intermediate gym-goers:
+# Overview
 
-> **"I know I should work out, but I don't know what to do in the
-> gym."**
+myPT is an AI-powered fitness coaching application built to solve one of the biggest challenges faced by beginner and intermediate gym-goers:
+
+> **"I know I should work out, but I don't know what to do in the gym."**
 
 Most people entering the gym struggle with questions like:
 
--   Which exercises should I perform?
--   How many sets and reps should I do?
--   Is my workout suitable for my goal?
--   What should I do after finishing today's workout?
--   How do I consistently make progress?
+* Which exercises should I perform?
+* How many sets and reps should I do?
+* Is my workout suitable for my goal?
+* What should I do after finishing today's workout?
+* How do I consistently make progress?
 
-Existing fitness applications either overwhelm users with thousands of
-exercises or require expensive personal trainers.
+Existing fitness applications either overwhelm users with thousands of exercises or require expensive personal trainers.
 
-myPT bridges this gap by acting as a personalized AI fitness coach that
-generates customized workout plans, guides users during workouts,
-answers fitness-related questions, and tracks long-term progress.
+myPT bridges this gap by acting as a personalized AI fitness coach that generates customized workout plans, guides users during workouts, answers fitness-related questions, and tracks long-term progress.
 
-## Problem Statement
+---
 
-Millions of people abandon their fitness journey because they lack
-structured guidance.
+# Problem Statement
 
-Common problems include: - No personalized workout routine - Information
-overload from YouTube and social media - Poor workout consistency -
-Incorrect exercise selection - Difficulty tracking progress - Expensive
-personal training services - Lack of motivation due to slow progress
+Millions of people abandon their fitness journey because they lack structured guidance.
 
-## Solution
+Common problems include:
 
-myPT generates personalized workout plans based on each user's profile
-(goal, experience, workout frequency, preferred split, etc.), guides
-them through every workout session, provides an AI coach for fitness
-questions, and tracks long-term progress.
+* No personalized workout routine
+* Information overload from YouTube and social media
+* Poor workout consistency
+* Incorrect exercise selection
+* Difficulty tracking progress
+* Expensive personal training services
+* Lack of motivation due to slow progress
 
-## Key Features
+The result is confusion, inconsistency, and eventually quitting.
 
--   🤖 AI-powered personalized workout generation
--   💪 Guided workout sessions with sets, reps, rest timer, and exercise
-    swapping
--   🧠 AI fitness coach for real-time assistance
--   📊 Workout history, analytics, and personal records
--   👤 Personalized onboarding and profile-based recommendations
+---
 
-## User Flow
+# Solution
 
-``` text
-Splash → Onboarding → Authentication → Profile Setup → AI Workout Generation → Home → Workout Session → Workout Summary → Progress Tracking
+myPT provides an intelligent AI-powered fitness companion that simplifies the entire workout experience.
+
+Instead of manually creating workout plans, users simply complete their profile, and the application generates a personalized routine based on:
+
+* Fitness Goal
+* Experience Level
+* Workout Frequency
+* Preferred Workout Split
+* Available Equipment
+
+The application then guides the user throughout the workout while continuously tracking their progress.
+
+---
+
+# Key Features
+
+## 🤖 AI Workout Generation
+
+* Personalized workout plans
+* Goal-specific exercise selection
+* Beginner and intermediate friendly
+* Dynamic workout scheduling
+* Progressive training structure
+
+---
+
+## 💪 Guided Workout Experience
+
+Users receive a complete workout session including:
+
+* Exercise demonstrations
+* Sets & reps
+* Rest timer
+* Exercise instructions
+* Exercise swapping
+* Workout completion tracking
+
+The application acts like a virtual personal trainer throughout the workout.
+
+---
+
+## 🧠 AI Fitness Coach
+
+An integrated AI assistant allows users to ask fitness-related questions such as:
+
+* How do I perform this exercise?
+* Which muscles does this target?
+* Can I replace this exercise?
+* Why am I doing this movement?
+* How can I improve my performance?
+
+This provides real-time guidance without leaving the application.
+
+---
+
+## 📊 Progress Analytics
+
+Users can monitor their fitness journey through:
+
+* Workout history
+* Training consistency
+* Workout statistics
+* Personal records
+* Performance insights
+
+---
+
+## 👤 Personalized Experience
+
+Each workout plan is customized using:
+
+* Age
+* Height
+* Weight
+* Gender
+* Fitness Goal
+* Experience Level
+* Weekly Workout Days
+* Preferred Workout Split
+
+No two users receive identical workout plans.
+
+---
+
+# User Flow
+
+```text
+Splash Screen
+      │
+      ▼
+Onboarding
+      │
+      ▼
+Authentication
+      │
+      ▼
+Profile Completion
+      │
+      ▼
+AI Workout Generation
+      │
+      ▼
+Home Dashboard
+      │
+      ▼
+Workout Session
+      │
+      ▼
+Workout Summary
+      │
+      ▼
+Progress Tracking
 ```
 
-## Tech Stack
+---
 
-### Mobile
+# Technical Architecture
 
--   React Native
--   Expo
--   TypeScript
+```text
+                React Native (Expo)
+                       │
+                       │
+                Expo Router
+                       │
+      ┌────────────────┴────────────────┐
+      │                                 │
+ Zustand State                 TanStack Query
+      │                                 │
+      └────────────────┬────────────────┘
+                       │
+                Express.js API
+                       │
+                Prisma ORM
+                       │
+                PostgreSQL
+                  (Supabase)
+                       │
+        Authentication + Database
+                       │
+              AI Integration Layer
+         (Google Gemini / OpenAI)
+```
 
-### Frontend
+---
 
--   Expo Router
--   NativeWind
--   Tailwind CSS
+# Technology Stack
 
-### Backend
+## Mobile
 
--   Node.js
--   Express.js
+* React Native
+* Expo
+* TypeScript
 
-### Database
+## Frontend
 
--   PostgreSQL (Supabase)
--   Prisma ORM
+* NativeWind
+* Tailwind CSS
+* Expo Router
 
-### State Management
+## Backend
 
--   Zustand
--   TanStack Query
+* Node.js
+* Express.js
 
-### Authentication
+## Database
 
--   Supabase Authentication
+* PostgreSQL
+* Supabase
 
-### AI
+## ORM
 
--   Google Gemini
--   OpenAI
+* Prisma
 
-## Engineering Highlights
+## State Management
 
--   Feature-first architecture
--   Type-safe APIs
--   Modular reusable components
--   Optimized relational database schema
--   Efficient state management
--   Persistent authentication
--   AI integration with minimized API usage
+* Zustand
+* TanStack Query
 
-## Future Improvements
+## Authentication
 
--   AI exercise form analysis
--   Nutrition planning
--   Wearable integration
--   Offline support
--   Push notifications
--   Voice AI coach
--   Advanced analytics
+* Supabase Authentication
 
-## Installation
+## AI
 
-``` bash
+* Google Gemini
+* OpenAI APIs
+
+## Other Tools
+
+* Firebase
+* Postman
+* Git
+* GitHub
+
+---
+
+# Database Design
+
+The application follows a normalized relational database design.
+
+Major entities include:
+
+* Users
+* Profiles
+* Exercises
+* Workout Templates
+* User Workout Plans
+* Workout Sessions
+* Exercise Logs
+* Personal Records
+* Weekly Reports
+* AI Chat History
+
+The schema supports scalable workout generation, session tracking, analytics, and AI interactions while maintaining data consistency through foreign key relationships.
+
+---
+
+# Engineering Highlights
+
+The project focuses on building a production-ready application rather than just a prototype.
+
+Key engineering decisions include:
+
+* Feature-first project architecture
+* Clean separation of frontend and backend
+* Type-safe APIs
+* Modular component design
+* Efficient state management
+* Optimized database schema
+* Reusable UI components
+* AI integration with minimal API usage
+* Persistent authentication
+* Scalable backend architecture
+* Responsive mobile-first design
+
+---
+
+# Challenges Solved
+
+During development, several real-world engineering challenges were addressed:
+
+* Designing a scalable relational database schema
+* Building dynamic workout generation logic
+* Managing workout session persistence
+* Maintaining referential integrity across workout data
+* Reducing unnecessary AI API calls
+* Optimizing Supabase queries
+* Implementing secure authentication
+* Creating reusable UI components
+* Handling complex workout state transitions
+
+---
+
+# Future Improvements
+
+Planned enhancements include:
+
+* AI-powered exercise form analysis
+* Nutrition recommendation engine
+* Wearable device integration
+* Smart workout adaptations
+* Offline workout support
+* Push notifications
+* Social workout sharing
+* Advanced analytics dashboard
+* Voice-based AI coaching
+* Premium subscription features
+
+---
+
+# Project Goals
+
+The primary goal of myPT is to make professional fitness guidance accessible to everyone.
+
+Rather than replacing personal trainers, myPT serves as an intelligent training companion that helps users:
+
+* Train with confidence
+* Stay consistent
+* Learn proper exercise techniques
+* Build sustainable fitness habits
+* Achieve long-term fitness goals
+
+---
+
+# Screenshots
+
+> Add screenshots or GIFs here.
+
+```text
+Splash Screen
+
+Onboarding
+
+Authentication
+
+Workout Dashboard
+
+Workout Session
+
+AI Coach
+
+Workout Summary
+
+Profile
+
+Analytics
+```
+
+---
+
+# Installation
+
+```bash
+# Clone repository
 git clone https://github.com/yourusername/myPT.git
+
+# Navigate into project
 cd myPT
+
+# Install dependencies
 npm install
+
+# Start development server
 npx expo start
 ```
 
-## Environment Variables
+---
 
-``` env
+# Environment Variables
+
+Create a `.env` file and configure the following variables:
+
+```env
 EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
+
 OPENAI_API_KEY=
+
 GEMINI_API_KEY=
 ```
 
-## License
+---
+
+# License
 
 This project is intended for educational and portfolio purposes.
 
-## Author
+---
 
-**Developed by:** Your Name
+# Author
 
-If you found this project interesting, please consider ⭐ starring the
-repository.
+**Developed by:** *Your Name*
+
+If you found this project interesting, feel free to ⭐ the repository.
+
+---
+
+# Why this README stands out
+
+This README goes beyond listing features—it explains the **problem, motivation, engineering decisions, architecture, and technical depth**. That style is what recruiters and hiring managers typically look for when evaluating portfolio projects, as it demonstrates not just what you built, but *why* you built it and *how* you approached solving the problem.
